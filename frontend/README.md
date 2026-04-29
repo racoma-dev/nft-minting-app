@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# NFT Minting App Frontend
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies and start the local development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd frontend
+bun install
+bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Local Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+Create `frontend/.env.local` from the example file:
 
-## Learn More
+```bash
+cp .env.example .env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+Set these values:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+NEXT_PUBLIC_PROJECT_ID=<walletconnect-project-id>
+RELAYER_PRIVATE_KEY=<throwaway-relayer-private-key>
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+`RELAYER_PRIVATE_KEY` must be a disposable development relayer key with the `0x` prefix. Do not commit `.env.local`, and do not reuse a production or personal wallet key.
 
-## Deploy on Vercel
+## Local API Connectivity Check
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Start the app:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+```bash
+cd frontend
+bun run dev
+```
+
+Use the local URL printed by Next.js. The default is `http://localhost:3000`, but Next.js may choose another port such as `3001` if `3000` is already in use.
+
+In another shell, verify `POST /api/get-mint-params`:
+
+```bash
+curl -i http://localhost:3000/api/get-mint-params \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "address": "0x0000000000000000000000000000000000000001",
+    "quantity": 1,
+    "networkId": "11155111"
+  }'
+```
+
+Expected successful response:
+
+- HTTP `200`
+- JSON contains `nonce`, `expiry`, and `messageToSign`
+- `messageToSign` is a `0x`-prefixed hash
+
+Verify `POST /api/mint` reaches the route and returns the expected error shape with an intentionally invalid signature:
+
+```bash
+curl -i http://localhost:3000/api/mint \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "address": "0x0000000000000000000000000000000000000001",
+    "quantity": 1,
+    "nonce": "0",
+    "expiry": 1893456000,
+    "signature": "0x",
+    "networkId": "11155111"
+  }'
+```
+
+Expected response:
+
+- HTTP `500`
+- JSON contains `error` and `message`
+- `error` is `Failed to mint`
+
+A full successful `/api/mint` response requires signing the `messageToSign` from `/api/get-mint-params` with the connected wallet and using a funded relayer wallet. On success, the JSON contains `transactionHash` and `blockNumber`.
