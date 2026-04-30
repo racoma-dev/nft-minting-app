@@ -110,8 +110,7 @@ export default function MintButton({
         throw new Error('Not enough mints available');
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiUrl}/get-mint-params`, {
+      const response = await fetch('/api/get-mint-params', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +131,7 @@ export default function MintButton({
 
       const signature = await signer.signMessage(ethers.getBytes(messageToSign));
 
-      const mintResponse = await fetch(`${apiUrl}/mint`, {
+      const mintResponse = await fetch('/api/mint', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
