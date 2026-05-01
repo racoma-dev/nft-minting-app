@@ -1,6 +1,0 @@
-branch-defaults:
-  default:
-    environment: nft-minting-app-backend-env
-global:
-  application_name: nft-minting-app-backend
-  default_region: ap-northeast-1
