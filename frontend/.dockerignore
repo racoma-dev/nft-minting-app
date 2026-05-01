@@ -1,7 +1,0 @@
-node_modules
-.dockerignore
-Dockerfile
-.env
-.env.local
-.git
-.gitignore
