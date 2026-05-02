@@ -13,23 +13,23 @@
 
 | ディレクトリ | 役割 | 主要技術 |
 |---|---|---|
-| `frontend/` | Next.js 14 (App Router) UI | Next.js / Bun / TypeScript / `@web3modal/ethers` / `ethers@6` |
+| `apps/web/` | Next.js 14 (App Router) UI | Next.js / Bun / TypeScript / `@web3modal/ethers` / `ethers@6` |
 | `backend/` | リレイヤー署名・gasless mint API | Hono + `@hono/node-server` / Bun |
 | `contract/` | スマートコントラクト + デプロイ成果物 | Hardhat / Hardhat Ignition |
 
 ### 1.2 既存デプロイ（移行前）
 
 - **backend**: AWS Elastic Beanstalk（`ap-northeast-1`, application `nft-minting-app-backend`）。`.github/workflows/deploy-backend.yml` が `main` push でデプロイ。**現在は停止済み**。
-- **frontend**: 旧ドメイン `nft-minting-app.rcm0208.xyz` で配信されていた。
-- backend → frontend 通信: フロント側は `NEXT_PUBLIC_API_URL` で backend エンドポイントを呼び、backend 側は CORS allowlist でオリジン制御。
+- **web app**: 旧ドメイン `nft-minting-app.rcm0208.xyz` で配信されていた。
+- backend → web app 通信: フロント側は `NEXT_PUBLIC_API_URL` で backend エンドポイントを呼び、backend 側は CORS allowlist でオリジン制御。
 
 ### 1.3 重要な前提条件
 
 - **backend の処理は 2 エンドポイントのみ**で、いずれもステートレス
   - `POST /get-mint-params`
   - `POST /mint`
-- フロント・バック双方が `../../contract/ignition/deployments/...` 配下の ABI / アドレス JSON を直接 import している
-- 機密値は `RELAYER_PRIVATE_KEY`（backend）、`NEXT_PUBLIC_PROJECT_ID`（WalletConnect projectId, frontend）
+- フロント・バック双方が `../../../contract/ignition/deployments/...` 配下の ABI / アドレス JSON を直接 import している
+- 機密値は `RELAYER_PRIVATE_KEY`（backend）、`NEXT_PUBLIC_PROJECT_ID`（WalletConnect projectId, web app）
 
 ---
 
@@ -37,13 +37,13 @@
 
 ### 2.1 Vercel 移行戦略: **案 A — backend を Next.js Route Handlers に統合**
 
-`backend/src/*` のロジックを `frontend/app/api/**/route.ts` に移植し、**Vercel 単一プロジェクト**で完結させる。
+`backend/src/*` のロジックを `apps/web/app/api/**/route.ts` に移植し、**Vercel 単一プロジェクト**で完結させる。
 
 **選定理由**
 
 - backend が 2 関数・ステートレスでサーバーレスとの相性が極めて良い
 - CORS allowlist と `NEXT_PUBLIC_API_URL` という運用上の負債を解消できる
-- Preview Deployment が 1 PR で frontend / API 両方を反映するためレビューが容易
+- Preview Deployment が 1 PR で web app / API 両方を反映するためレビューが容易
 - EB / Docker / ELB 関連の重複インフラを完全廃止できる
 
 ### 2.2 AWS EB の扱い
@@ -60,8 +60,8 @@
 
 ### 2.4 コントラクト成果物のクロス参照対応
 
-`frontend/` 配下から `../../contract/...` を import している既存実装を維持するため、**Vercel の Root Directory はリポジトリルート (`./`) のまま**とする。
-ビルドコマンドで `frontend/` に降りて Next.js をビルドする方式を採用する（コード書き換え不要・最小変更）。
+`apps/web/` 配下から `../../../contract/...` を import している既存実装を維持するため、**Vercel の Root Directory はリポジトリルート (`./`) のまま**とする。
+ビルドコマンドで `apps/web/` に降りて Next.js をビルドする方式を採用する（コード書き換え不要・最小変更）。
 
 ---
 
@@ -100,13 +100,13 @@
 
 | 変数 | スコープ | 値 | 備考 |
 |---|---|---|---|
-| `NEXT_PUBLIC_PROJECT_ID` | Production / Preview / Development | WalletConnect Project ID | `frontend/context/web3modal.tsx` で起動時に必須 |
+| `NEXT_PUBLIC_PROJECT_ID` | Production / Preview / Development | WalletConnect Project ID | `apps/web/context/web3modal.tsx` で起動時に必須 |
 | `RELAYER_PRIVATE_KEY` | Production / Preview | **新規生成**したリレイヤーウォレットの秘密鍵 | **`NEXT_PUBLIC_` を絶対に付けない**。Vercel Encrypted Env のみで保持 |
 
 - **キーは移行を機にローテーションする**（決定事項）。
   - 新リレイヤーウォレットを生成 → 各テストネットでガス補給 → Vercel Encrypted Env に登録 → 旧キーは破棄。
   - 旧キーは EB 環境（停止済み）に置かれていたため、これを完全に隔離する目的。
-- ローカル開発用に `frontend/.env.local` を `.env.example` で雛形化する（commit しない）。
+- ローカル開発用に `apps/web/.env.local` を `.env.example` で雛形化する（commit しない）。
 
 ---
 
@@ -116,14 +116,14 @@
 |---|---|
 | Framework Preset | Next.js |
 | Root Directory | `./`（リポジトリルート） |
-| Install Command | `cd frontend && bun install --frozen-lockfile` |
-| Build Command | `cd frontend && bun run build` |
-| Output Directory | `frontend/.next` |
+| Install Command | `cd apps/web && bun install --frozen-lockfile` |
+| Build Command | `cd apps/web && bun run build` |
+| Output Directory | `apps/web/.next` |
 | Node.js Version | 20.x |
-| Package Manager | Bun（`frontend/bun.lockb` を使用） |
+| Package Manager | Bun（`apps/web/bun.lockb` を使用） |
 
 必要に応じて `vercel.json` をリポジトリルートに配置し、上記設定をコード化する（GUI 設定でも可）。
-`frontend/next.config.mjs` には、モノレポ警告抑止のため `experimental.outputFileTracingRoot` をリポジトリルートに設定することを検討。
+`apps/web/next.config.mjs` には、モノレポ警告抑止のため `experimental.outputFileTracingRoot` をリポジトリルートに設定することを検討。
 
 各 Route Handler には以下を必須付与する（ethers が Edge ランタイムで動作しないため）:
 
@@ -141,22 +141,22 @@ export const dynamic = 'force-dynamic';
 
 ### フェーズ 1: backend を Next.js に移植
 
-- [ ] 1-1. `frontend/lib/server/relayer-wallet.ts` を作成し、`backend/src/utils/ethers.ts` の `getRelayerWallet` を移植
-- [ ] 1-2. `frontend/lib/server/signature-service.ts` を作成し、`backend/src/services/signatureService.ts` の純粋ロジック（`getMintParams` / `verifyAndMint` / `gaslessERC721AbiMap` / `isSupportedNetwork`）を移植
-  - import パスを `../../contract/...` のまま維持できるか、`frontend/` ルート視点で `../contract/...` に調整するかは実装時に確認
-- [ ] 1-3. `frontend/app/api/get-mint-params/route.ts` を作成
+- [ ] 1-1. `apps/web/lib/server/relayer-wallet.ts` を作成し、`backend/src/utils/ethers.ts` の `getRelayerWallet` を移植
+- [ ] 1-2. `apps/web/lib/server/signature-service.ts` を作成し、`backend/src/services/signatureService.ts` の純粋ロジック（`getMintParams` / `verifyAndMint` / `gaslessERC721AbiMap` / `isSupportedNetwork`）を移植
+  - import パスを `../../../contract/...` のまま維持できるか、`apps/web/` ルート視点で `../contract/...` に調整するかは実装時に確認
+- [ ] 1-3. `apps/web/app/api/get-mint-params/route.ts` を作成
   - `POST` ハンドラで `request.json()` を読み、`getMintParams` を呼ぶ
   - `runtime = 'nodejs'`, `dynamic = 'force-dynamic'` を設定
   - エラーハンドリングは既存 controller と同等のレスポンス形に揃える
-- [ ] 1-4. `frontend/app/api/mint/route.ts` を作成（同様に `verifyAndMint` を呼ぶ）
+- [ ] 1-4. `apps/web/app/api/mint/route.ts` を作成（同様に `verifyAndMint` を呼ぶ）
   - `export const maxDuration = 30;` を付与
-- [ ] 1-5. `frontend/package.json` に `ethers` を依存追加（既に入っていれば不要）
+- [ ] 1-5. `apps/web/package.json` に `ethers` を依存追加（既に入っていれば不要）
 - [ ] 1-6. ローカル `bun run dev` で `/api/get-mint-params`, `/api/mint` を curl 等で疎通確認
 
 ### フェーズ 2: フロントエンドの API 呼び出し置換
 
-- [ ] 2-1. `frontend/app/gasless-mint/[networkUrl]/components/mint-button.tsx` の `apiUrl` 解決を削除し、`fetch('/api/get-mint-params', ...)` / `fetch('/api/mint', ...)` の相対パスに書き換え
-- [ ] 2-2. `grep -rn NEXT_PUBLIC_API_URL frontend/` で残存参照ゼロを確認
+- [ ] 2-1. `apps/web/app/gasless-mint/[networkUrl]/components/mint-button.tsx` の `apiUrl` 解決を削除し、`fetch('/api/get-mint-params', ...)` / `fetch('/api/mint', ...)` の相対パスに書き換え
+- [ ] 2-2. `grep -rn NEXT_PUBLIC_API_URL apps/web/` で残存参照ゼロを確認
 - [ ] 2-3. ローカルで gasless mint フローの E2E 動作確認（最低 Sepolia 1 件）
 
 ### フェーズ 3: Vercel ビルド設定 + リレイヤー鍵ローテーション
@@ -192,11 +192,11 @@ export const dynamic = 'force-dynamic';
 - [ ] 6-2. `.elasticbeanstalk/` を削除
 - [ ] 6-3. ルートの `Dockerfile` を削除
 - [ ] 6-4. `docker-compose-dev.yml` を削除（ローカル開発で使わない方針 — 決定事項）
-- [ ] 6-5. `frontend/Dockerfile` を削除
+- [ ] 6-5. `apps/web/Dockerfile` を削除
 - [ ] 6-6. `backend/Dockerfile.dev` を削除（`backend/` ごと削除されるため自動的に消える）
 - [ ] 6-7. `backend/` ディレクトリ全体を削除
-- [ ] 6-8. `frontend/lib/utils.ts` の `getURL` 関数を見直し（未使用なら削除、利用継続なら `VERCEL_URL` も考慮）
-- [ ] 6-9. README を更新し、新しい開発フロー（`cd frontend && bun dev`）とデプロイフロー（Vercel）を記載
+- [ ] 6-8. `apps/web/lib/utils.ts` の `getURL` 関数を見直し（未使用なら削除、利用継続なら `VERCEL_URL` も考慮）
+- [ ] 6-9. README を更新し、新しい開発フロー（`cd apps/web && bun dev`）とデプロイフロー（Vercel）を記載
 
 ---
 
@@ -206,8 +206,8 @@ export const dynamic = 'force-dynamic';
 
 | ファイル | 該当 |
 |---|---|
-| `frontend/context/web3modal.tsx` | `metadata.url = 'https://nft-minting-app.rcm0208.xyz'` |
-| `frontend/context/web3modal.tsx` | `metadata.icons` の GitHub raw URL（必要に応じて差し替え） |
+| `apps/web/context/web3modal.tsx` | `metadata.url = 'https://nft-minting-app.rcm0208.xyz'` |
+| `apps/web/context/web3modal.tsx` | `metadata.icons` の GitHub raw URL（必要に応じて差し替え） |
 | `backend/src/index.ts` | CORS allowlist の `rcm0208.xyz` / `nft-minting-app.rcm0208.xyz`（**§ 6 で backend ごと削除** されるため対応不要） |
 
 ---
@@ -220,8 +220,8 @@ export const dynamic = 'force-dynamic';
 | RPC レート制限 | mint 失敗の散発 | `thirdweb` 系の公開 RPC は制限が厳しいため、Alchemy / Infura のキー付き RPC へ切替を検討 |
 | `RELAYER_PRIVATE_KEY` 露出 | 資金流出 | `NEXT_PUBLIC_` を絶対に付けない / Vercel Encrypted Env のみで保持 / コミット前に `git diff` で確認 |
 | Bun ビルドの差異 | ローカル成功・Vercel 失敗 | Vercel は Bun サポート済だが、初回 Preview で必ず通すこと。失敗時は `npm` / `pnpm` フォールバックも検討 |
-| `frontend/context/web3modal.tsx` が build 時に projectId 未定義で throw | ビルド失敗 | Vercel 環境変数を **Production / Preview / Development の 3 環境すべて** に設定 |
-| クロス import (`../../contract/...`) が Vercel ビルドコンテキストに含まれない | ビルド失敗 | Root Directory を `./` に固定。`outputFileTracingRoot` 設定で Function バンドルにも含める |
+| `apps/web/context/web3modal.tsx` が build 時に projectId 未定義で throw | ビルド失敗 | Vercel 環境変数を **Production / Preview / Development の 3 環境すべて** に設定 |
+| クロス import (`../../../contract/...`) が Vercel ビルドコンテキストに含まれない | ビルド失敗 | Root Directory を `./` に固定。`outputFileTracingRoot` 設定で Function バンドルにも含める |
 
 ---
 
@@ -243,17 +243,17 @@ export const dynamic = 'force-dynamic';
 ## 10. 参考: ファイル削除/変更サマリ（移行完了時点）
 
 **新規作成**
-- `frontend/app/api/get-mint-params/route.ts`
-- `frontend/app/api/mint/route.ts`
-- `frontend/lib/server/signature-service.ts`
-- `frontend/lib/server/relayer-wallet.ts`
+- `apps/web/app/api/get-mint-params/route.ts`
+- `apps/web/app/api/mint/route.ts`
+- `apps/web/lib/server/signature-service.ts`
+- `apps/web/lib/server/relayer-wallet.ts`
 - `vercel.json`（任意）
-- `frontend/.env.example`
+- `apps/web/.env.example`
 
 **変更**
-- `frontend/app/gasless-mint/[networkUrl]/components/mint-button.tsx`
-- `frontend/context/web3modal.tsx`（メタデータ URL）
-- `frontend/next.config.mjs`（必要なら `outputFileTracingRoot`）
+- `apps/web/app/gasless-mint/[networkUrl]/components/mint-button.tsx`
+- `apps/web/context/web3modal.tsx`（メタデータ URL）
+- `apps/web/next.config.mjs`（必要なら `outputFileTracingRoot`）
 - `README.md`
 
 **削除**
@@ -262,4 +262,4 @@ export const dynamic = 'force-dynamic';
 - `.elasticbeanstalk/`
 - `Dockerfile`（ルート）
 - `docker-compose-dev.yml`
-- `frontend/Dockerfile`
+- `apps/web/Dockerfile`

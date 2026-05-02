@@ -1,11 +1,11 @@
-# NFT Minting App Frontend
+# NFT Minting App Web
 
 ## Getting Started
 
 Install dependencies and start the local development server:
 
 ```bash
-cd frontend
+cd apps/web
 bun install
 bun run dev
 ```
@@ -14,7 +14,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Local Environment
 
-Create `frontend/.env.local` from the example file:
+Create `apps/web/.env.local` from the example file:
 
 ```bash
 cp .env.example .env.local
@@ -34,7 +34,7 @@ RELAYER_PRIVATE_KEY=<throwaway-relayer-private-key>
 Start the app:
 
 ```bash
-cd frontend
+cd apps/web
 bun run dev
 ```
 

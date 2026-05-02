@@ -27,7 +27,7 @@ const metadata = {
   description: 'NFT Minting App',
   url: 'https://nft-minting-app.rcm0208.xyz', // origin must match your domain & subdomain
   icons: [
-    'https://raw.githubusercontent.com/rcm0208/nft-minting-app/main/frontend/public/image/logo.svg',
+    'https://raw.githubusercontent.com/rcm0208/nft-minting-app/main/apps/web/public/image/logo.svg',
   ],
 };
 
