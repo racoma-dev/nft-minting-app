@@ -15,7 +15,6 @@ import gaslessERC721A_168587773 from "../../../../contract/ignition/deployments/
 import blastSepoliaContractAddresses from "../../../../contract/ignition/deployments/chain-168587773/deployed_addresses.json";
 import { getRelayerWallet } from "./relayer-wallet";
 
-// biome-ignore lint/suspicious/noExplicitAny: backend 側の型を維持
 export const gaslessERC721AbiMap: { [key: string]: any } = {
 	"11155111": {
 		abi: gaslessERC721A_11155111.abi,
@@ -41,7 +40,8 @@ export const gaslessERC721AbiMap: { [key: string]: any } = {
 	},
 	"84532": {
 		abi: gaslessERC721A_84532.abi,
-		address: baseSepoliaContractAddresses["GaslessERC721AModule#GaslessERC721A"],
+		address:
+			baseSepoliaContractAddresses["GaslessERC721AModule#GaslessERC721A"],
 		rpcUrl: "https://sepolia.base.org",
 	},
 	"168587773": {
@@ -52,7 +52,8 @@ export const gaslessERC721AbiMap: { [key: string]: any } = {
 	},
 	"59141": {
 		abi: gaslessERC721A_59141.abi,
-		address: lineaSepoliaContractAddresses["GaslessERC721AModule#GaslessERC721A"],
+		address:
+			lineaSepoliaContractAddresses["GaslessERC721AModule#GaslessERC721A"],
 		rpcUrl: "https://rpc.sepolia.linea.build",
 	},
 };
@@ -61,11 +62,23 @@ export function isSupportedNetwork(networkId: string): boolean {
 	return networkId in gaslessERC721AbiMap;
 }
 
+function validateMintInput(signer: string, quantity: number) {
+	if (!ethers.isAddress(signer)) {
+		throw new Error(`Invalid signer address: ${signer}`);
+	}
+
+	if (!Number.isInteger(quantity) || quantity <= 0) {
+		throw new Error(`Invalid quantity: ${quantity}`);
+	}
+}
+
 export const getMintParams = async (
 	signer: string,
 	quantity: number,
 	networkId: string,
 ) => {
+	validateMintInput(signer, quantity);
+
 	if (!isSupportedNetwork(networkId)) {
 		throw new Error(`Unsupported network: ${networkId}`);
 	}
@@ -113,6 +126,8 @@ export const verifyAndMint = async (
 	signature: string,
 	networkId: string,
 ) => {
+	validateMintInput(signer, quantity);
+
 	if (!isSupportedNetwork(networkId)) {
 		throw new Error(`Unsupported network: ${networkId}`);
 	}
