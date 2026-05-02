@@ -1,10 +1,10 @@
-import lineaSepoliaContractAddresses from "../../contract/ignition/deployments/chain-59141/deployed_addresses.json";
-import amoyContractAddresses from "../../contract/ignition/deployments/chain-80002/deployed_addresses.json";
-import baseSepoliaContractAddresses from "../../contract/ignition/deployments/chain-84532/deployed_addresses.json";
-import arbitrumSepoliaContractAddresses from "../../contract/ignition/deployments/chain-421614/deployed_addresses.json";
-import sepoliaContractAddresses from "../../contract/ignition/deployments/chain-11155111/deployed_addresses.json";
-import optimismSepoliaContractAddresses from "../../contract/ignition/deployments/chain-11155420/deployed_addresses.json";
-import blastSepoliaContractAddresses from "../../contract/ignition/deployments/chain-168587773/deployed_addresses.json";
+import lineaSepoliaContractAddresses from "../../../contract/ignition/deployments/chain-59141/deployed_addresses.json";
+import amoyContractAddresses from "../../../contract/ignition/deployments/chain-80002/deployed_addresses.json";
+import baseSepoliaContractAddresses from "../../../contract/ignition/deployments/chain-84532/deployed_addresses.json";
+import arbitrumSepoliaContractAddresses from "../../../contract/ignition/deployments/chain-421614/deployed_addresses.json";
+import sepoliaContractAddresses from "../../../contract/ignition/deployments/chain-11155111/deployed_addresses.json";
+import optimismSepoliaContractAddresses from "../../../contract/ignition/deployments/chain-11155420/deployed_addresses.json";
+import blastSepoliaContractAddresses from "../../../contract/ignition/deployments/chain-168587773/deployed_addresses.json";
 
 export interface NetworkConfig {
 	networkId: string;
